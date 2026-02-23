@@ -32,6 +32,11 @@ const normalizeProducts = (data) =>
     price: Number(p.price || 0),
   }));
 
+  const normalizeCustomers = (data) =>
+  data.map((c) => ({
+    id: c.id,
+    name: c.name || c.fullName || c.email || c.id,
+  }));
 /* ---------------- ERROR HANDLER ---------------- */
 
 const handleApiError = (err, fallbackMessage, setError) => {
@@ -76,6 +81,7 @@ const handleApiError = (err, fallbackMessage, setError) => {
 const SalesPage = () => {
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedSale, setExpandedSale] = useState(null);
@@ -89,13 +95,15 @@ const SalesPage = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [salesRes, productsRes] = await Promise.all([
+       const [salesRes, productsRes, customersRes] = await Promise.all([ // ? CAMBIO
         apiClient.get('/api/sales'),
         apiClient.get('/api/products'),
+        apiClient.get('/api/customers'), // ? NUEVO
       ]);
 
       setSales(normalizeSales(salesRes.data));
       setProducts(normalizeProducts(productsRes.data));
+      setCustomers(normalizeCustomers(customersRes.data));
       setError('');
     } catch (err) {
       handleApiError(err, 'Could not load sales.', setError);
@@ -294,11 +302,18 @@ const SalesPage = () => {
       {showModal && (
         <Modal title="Create Sale" onClose={() => setShowModal(false)}>
           <form className="form-grid" onSubmit={submitSale}>
-            <input
-              placeholder="Customer ID (optional)"
+             <select
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
-            />
+            >
+              <option value="">Walk-in customer (optional)</option>
+
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
 
             {items.map((item, index) => {
               const subtotal = calculateItemSubtotal(item);

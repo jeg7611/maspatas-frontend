@@ -14,8 +14,31 @@ import {
   Cell,
   LineChart,
   Line,
+  CartesianGrid,
 } from 'recharts';
 import { motion } from 'framer-motion';
+
+/* ---------------- STYLES / COLORS ---------------- */
+
+const COLORS = {
+  primary: '#6366f1',
+  success: '#22c55e',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  neutral: '#94a3b8',
+};
+
+/* ---------------- FORMATTERS ---------------- */
+
+const currency = (value) =>
+  `$${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+  })}`;
+
+const number = (value) =>
+  Number(value || 0).toLocaleString();
+
+/* ---------------- COMPONENT ---------------- */
 
 const DashboardPage = () => {
   const [stats, setStats] = useState(null);
@@ -49,20 +72,19 @@ const DashboardPage = () => {
       const movements = movementsRes.data;
       const sales = salesRes.data;
 
-      // ?? Products
+      /* ---------------- PRODUCTS ---------------- */
+
       const totalProducts = products.length;
       const activeProducts = products.filter(p => p.active).length;
 
-      // ?? Inventory
+      /* ---------------- INVENTORY ---------------- */
+
       const totalStock = inventory.reduce((sum, i) => sum + i.stock, 0);
       const lowStock = inventory.filter(i => i.stock <= i.minimumStock).length;
       const outOfStock = inventory.filter(i => i.stock <= 0).length;
 
-      // ??
-      const totalCustomers = customers.length;
-      const totalUsers = users.length;
+      /* ---------------- MOVEMENTS ---------------- */
 
-      // ?? Movements
       const movementStats = movements.reduce(
         (acc, mov) => {
           if (mov.type === 'IN') acc.in += mov.quantity;
@@ -77,11 +99,12 @@ const DashboardPage = () => {
         { name: 'Exits', value: movementStats.out },
       ];
 
-      // ?? Sales
+      /* ---------------- SALES ---------------- */
+
       const totalSales = sales.length;
       const revenue = sales.reduce((sum, s) => sum + (s.total || 0), 0);
+      const avgTicket = totalSales ? revenue / totalSales : 0;
 
-      // ?? Sales per day
       const salesByDay = sales.reduce((acc, sale) => {
         const date = new Date(sale.createdAt).toLocaleDateString();
         acc[date] = (acc[date] || 0) + (sale.total || 0);
@@ -99,17 +122,18 @@ const DashboardPage = () => {
         totalStock,
         lowStock,
         outOfStock,
-        totalCustomers,
-        totalUsers,
+        totalCustomers: customers.length,
+        totalUsers: users.length,
         movementChart,
         totalSales,
         revenue,
+        avgTicket,
         salesChart,
       });
 
       setError('');
     } catch (err) {
-      console.error(err);
+      console.error('? Dashboard Error:', err);
       setError('Could not load dashboard data.');
     } finally {
       setLoading(false);
@@ -136,28 +160,28 @@ const DashboardPage = () => {
       {/* ? KPI Cards */}
       <div className="dashboard-grid">
         <AnimatedCard>
-          <Stat label="Products" value={stats.totalProducts} />
-          <Stat label="Active" value={stats.activeProducts} />
+          <Stat label="Products" value={number(stats.totalProducts)} />
+          <Stat label="Active" value={number(stats.activeProducts)} success />
         </AnimatedCard>
 
         <AnimatedCard>
-          <Stat label="Total Stock" value={stats.totalStock} />
-          <Stat label="Low Stock" value={stats.lowStock} warning />
-          <Stat label="Out of Stock" value={stats.outOfStock} danger />
+          <Stat label="Total Stock" value={number(stats.totalStock)} />
+          <Stat label="Low Stock" value={number(stats.lowStock)} warning />
+          <Stat label="Out of Stock" value={number(stats.outOfStock)} danger />
         </AnimatedCard>
 
         <AnimatedCard>
-          <Stat label="Customers" value={stats.totalCustomers} />
+          <Stat label="Customers" value={number(stats.totalCustomers)} />
         </AnimatedCard>
 
         <AnimatedCard>
-          <Stat label="Users" value={stats.totalUsers} />
+          <Stat label="Users" value={number(stats.totalUsers)} />
         </AnimatedCard>
 
-        {/* ?? SALES CARD */}
         <AnimatedCard>
-          <Stat label="Sales" value={stats.totalSales} />
-          <Stat label="Revenue" value={`$${stats.revenue.toFixed(2)}`} />
+          <Stat label="Sales" value={number(stats.totalSales)} />
+          <Stat label="Revenue" value={currency(stats.revenue)} success />
+          <Stat label="Avg Ticket" value={currency(stats.avgTicket)} />
         </AnimatedCard>
       </div>
 
@@ -168,10 +192,14 @@ const DashboardPage = () => {
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
               <BarChart data={stats.movementChart}>
+                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                  <Cell fill={COLORS.success} />
+                  <Cell fill={COLORS.danger} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -197,9 +225,9 @@ const DashboardPage = () => {
                   dataKey="value"
                   outerRadius={100}
                 >
-                  <Cell />
-                  <Cell />
-                  <Cell />
+                  <Cell fill={COLORS.warning} />
+                  <Cell fill={COLORS.danger} />
+                  <Cell fill={COLORS.success} />
                 </Pie>
                 <Tooltip />
               </PieChart>
@@ -208,17 +236,24 @@ const DashboardPage = () => {
         </AnimatedCard>
       </div>
 
-      {/* ?? SALES TREND */}
+      {/* ? Sales Trend */}
       <div className="dashboard-grid">
         <AnimatedCard className="col-span-3">
           <h3>Sales Trend</h3>
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
               <LineChart data={stats.salesChart}>
+                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
-                <Line dataKey="total" />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke={COLORS.primary}
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -227,6 +262,8 @@ const DashboardPage = () => {
     </section>
   );
 };
+
+/* ---------------- UI COMPONENTS ---------------- */
 
 const AnimatedCard = ({ children, className = '' }) => (
   <motion.div
@@ -238,8 +275,13 @@ const AnimatedCard = ({ children, className = '' }) => (
   </motion.div>
 );
 
-const Stat = ({ label, value, danger, warning }) => (
-  <div className={`stat ${danger ? 'stat-danger' : ''} ${warning ? 'stat-warning' : ''}`}>
+const Stat = ({ label, value, danger, warning, success }) => (
+  <div
+    className={`stat 
+      ${danger ? 'stat-danger' : ''} 
+      ${warning ? 'stat-warning' : ''} 
+      ${success ? 'stat-success' : ''}`}
+  >
     <span>{label}</span>
     <strong>{value}</strong>
   </div>
