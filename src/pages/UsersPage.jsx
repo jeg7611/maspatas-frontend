@@ -16,7 +16,7 @@ const UsersPage = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const { data } = await apiClient.get('/api/users');
+      const { data } = await apiClient.get('/api/auth');
       setUsers(data);
       setError('');
     } catch {
