@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import apiClient from '../api/apiClient';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
@@ -32,7 +32,7 @@ const normalizeProducts = (data) =>
     price: Number(p.price || 0),
   }));
 
-  const normalizeCustomers = (data) =>
+const normalizeCustomers = (data) =>
   data.map((c) => ({
     id: c.id,
     name: c.name || c.fullName || c.email || c.id,
@@ -95,7 +95,7 @@ const SalesPage = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-       const [salesRes, productsRes, customersRes] = await Promise.all([ // ? CAMBIO
+      const [salesRes, productsRes, customersRes] = await Promise.all([ // ? CAMBIO
         apiClient.get('/api/sales'),
         apiClient.get('/api/products'),
         apiClient.get('/api/customers'), // ? NUEVO
@@ -222,11 +222,36 @@ const SalesPage = () => {
         </div>
       </div>
 
+      <div className="sales-totals">
+        <div className="totals-card">
+          <span>Total Sales</span>
+          <strong>{sales.length}</strong>
+        </div>
+
+        <div className="totals-card">
+          <span>Total Revenue</span>
+          <strong>
+            $
+            {sales
+              .reduce((sum, s) => sum + s.total, 0)
+              .toFixed(2)}
+          </strong>
+        </div>
+
+        <div className="totals-card">
+          <span>Total Items Sold</span>
+          <strong>
+            {sales.reduce((sum, s) => sum + s.items.length, 0)}
+          </strong>
+        </div>
+      </div>
+
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Sale</th>
+              <th>Customer</th>
               <th>Date</th>
               <th>Total</th>
               <th>Items</th>
@@ -234,75 +259,113 @@ const SalesPage = () => {
           </thead>
 
           <tbody>
-            {sales.map((sale) => (
-              <>
-                <tr
-                  key={sale.id}
-                  className="clickable-row"
-                  onClick={() =>
-                    setExpandedSale(expandedSale === sale.id ? null : sale.id)
-                  }
-                >
-                  <td><small>{sale.id.slice(0, 8)}...</small></td>
+            {sales.map((sale) => {
+              const customer = customers.find(
+                (c) => c.id === sale.customerId
+              );
 
-                  <td>
-                    {sale.createdAt
-                      ? new Date(sale.createdAt).toLocaleString()
-                      : '-'}
-                  </td>
+              const formattedDate = sale.createdAt
+                ? new Date(sale.createdAt).toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                }) +
+                ' ' +
+                new Date(sale.createdAt).toLocaleTimeString()
+                : '-';
 
-                  <td>
-                    <strong>${sale.total.toFixed(2)}</strong>
-                  </td>
-
-                  <td>{sale.items.length}</td>
-                </tr>
-
-                {expandedSale === sale.id && (
-                  <tr className="sale-details">
-                    <td colSpan="4">
-                      <table className="nested-table">
-                        <thead>
-                          <tr>
-                            <th>Product</th>
-                            <th>Qty</th>
-                            <th>Unit</th>
-                            <th>Subtotal</th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {sale.items.map((item, index) => {
-                            const product = products.find(
-                              (p) => p.id === item.productId
-                            );
-
-                            const subtotal = calculateItemSubtotal(item);
-
-                            return (
-                              <tr key={index}>
-                                <td>{product?.name || 'Unknown'}</td>
-                                <td>{item.quantity}</td>
-                                <td>${item.unitPrice.toFixed(2)}</td>
-                                <td><strong>${subtotal.toFixed(2)}</strong></td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+              return (
+                <React.Fragment key={sale.id}>
+                  <tr
+                    className="clickable-row"
+                    onClick={() =>
+                      setExpandedSale(
+                        expandedSale === sale.id ? null : sale.id
+                      )
+                    }
+                  >
+                    {/* ? ID más bonito */}
+                    <td>
+                      <strong>
+                        #{sale.id.slice(0, 6).toUpperCase()}
+                      </strong>
                     </td>
+
+                    {/* ? Cliente */}
+                    <td>
+                      {customer?.name || (
+                        <span className="walkin-badge">
+                          Walk-in
+                        </span>
+                      )}
+                    </td>
+
+                    {/* ? Fecha formateada */}
+                    <td>{formattedDate}</td>
+
+                    {/* ? Total */}
+                    <td>
+                      <strong>${sale.total.toFixed(2)}</strong>
+                    </td>
+
+                    {/* ? Items */}
+                    <td>{sale.items.length}</td>
                   </tr>
-                )}
-              </>
-            ))}
+
+                  {expandedSale === sale.id && (
+                    <tr className="sale-details">
+                      <td colSpan="5">
+                        <table className="nested-table">
+                          <thead>
+                            <tr>
+                              <th>Product</th>
+                              <th>Qty</th>
+                              <th>Unit</th>
+                              <th>Subtotal</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {sale.items.map((item, index) => {
+                              const product = products.find(
+                                (p) => p.id === item.productId
+                              );
+
+                              const subtotal =
+                                calculateItemSubtotal(item);
+
+                              return (
+                                <tr key={index}>
+                                  <td>
+                                    {product?.name || 'Unknown'}
+                                  </td>
+                                  <td>{item.quantity}</td>
+                                  <td>
+                                    ${item.unitPrice.toFixed(2)}
+                                  </td>
+                                  <td>
+                                    <strong>
+                                      ${subtotal.toFixed(2)}
+                                    </strong>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
-
       {showModal && (
         <Modal title="Create Sale" onClose={() => setShowModal(false)}>
           <form className="form-grid" onSubmit={submitSale}>
-             <select
+            <select
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
             >

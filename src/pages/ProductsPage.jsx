@@ -17,6 +17,7 @@ const ProductsPage = () => {
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyProduct);
+  const [errors, setErrors] = useState({});
 
   const loadProducts = async () => {
     setLoading(true);
@@ -47,18 +48,33 @@ const ProductsPage = () => {
     loadProducts();
   }, []);
 
+  const validate = (values = form) => {
+    const newErrors = {};
+
+    if (!values.name.trim()) {
+      newErrors.name = 'El nombre es obligatorio';
+    }
+
+    if (!values.price || Number(values.price) <= 0) {
+      newErrors.price = 'El precio debe ser mayor a 0';
+    }
+
+    return newErrors;
+  };
+
+  const handleChange = (field, value) => {
+    const updated = { ...form, [field]: value };
+    setForm(updated);
+    setErrors(validate(updated));
+  };
+
   const handleCreateProduct = async (event) => {
     event.preventDefault();
 
-    if (!form.name.trim()) {
-      setError('Product name is required.');
-      return;
-    }
+    const validationErrors = validate();
+    setErrors(validationErrors);
 
-    if (!form.price || Number(form.price) <= 0) {
-      setError('Price must be greater than 0.');
-      return;
-    }
+    if (Object.keys(validationErrors).length > 0) return;
 
     try {
       await apiClient.post('/api/products', {
@@ -70,6 +86,7 @@ const ProductsPage = () => {
 
       setShowModal(false);
       setForm(emptyProduct);
+      setErrors({});
       loadProducts();
     } catch (err) {
       console.error(err);
@@ -140,46 +157,84 @@ const ProductsPage = () => {
       {showModal && (
         <Modal title="Create Product" onClose={() => setShowModal(false)}>
           <form className="form-grid" onSubmit={handleCreateProduct}>
-            <input
-              placeholder="Name"
-              value={form.name}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, name: e.target.value }))
-              }
-              required
-            />
+            
+            <div className="form-group">
+              <label>Nombre del producto *</label>
+              <input
+                type="text"
+                placeholder="Ej: Concentrado Premium"
+                value={form.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+              />
+              {errors.name && (
+                <span className="field-error">{errors.name}</span>
+              )}
+            </div>
 
-            <input
-              placeholder="SKU"
-              value={form.sku}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, sku: e.target.value }))
-              }
-            />
+            <div className="form-group">
+              <label>SKU</label>
+              <input
+                type="text"
+                placeholder="Ej: SKU-001"
+                value={form.sku}
+                onChange={(e) => handleChange('sku', e.target.value)}
+              />
+            </div>
 
-            <textarea
-              placeholder="Description"
-              value={form.description}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, description: e.target.value }))
-              }
-            />
+            <div className="form-group full-width">
+              <label>Descripción</label>
+              <textarea
+                rows="3"
+                placeholder="Detalles opcionales del producto"
+                value={form.description}
+                onChange={(e) =>
+                  handleChange('description', e.target.value)
+                }
+              />
+            </div>
 
-            <input
-              placeholder="Price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.price}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, price: e.target.value }))
-              }
-              required
-            />
+            <div className="form-group">
+              <label>Precio *</label>
+              <input
+                type="number"
+                min="0"
+                step="100"
+                placeholder="Ej: 25000"
+                value={form.price}
+                onChange={(e) => handleChange('price', e.target.value)}
+              />
 
-            <button type="submit" className="btn btn-primary">
-              Save Product
-            </button>
+              {form.price && !errors.price && (
+                <span className="field-hint">
+                  {Number(form.price).toLocaleString('es-CO', {
+                    style: 'currency',
+                    currency: 'COP',
+                  })}
+                </span>
+              )}
+
+              {errors.price && (
+                <span className="field-error">{errors.price}</span>
+              )}
+            </div>
+
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowModal(false)}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={Object.keys(errors).length > 0}
+              >
+                Guardar producto
+              </button>
+            </div>
           </form>
         </Modal>
       )}

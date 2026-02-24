@@ -50,7 +50,7 @@ const MainLayout = ({ children }) => {
       <div className="main-panel">
         <header className="topbar">
           <div>
-            <h1>MasPatas.Frontend</h1>
+            <h1>MasPatas</h1>
             <p>Welcome back, {user?.username || user?.email}</p>
           </div>
         </header>
