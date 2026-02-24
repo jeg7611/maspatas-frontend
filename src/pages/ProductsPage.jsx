@@ -182,7 +182,7 @@ const ProductsPage = () => {
             </div>
 
             <div className="form-group full-width">
-              <label>Descripción</label>
+              <label>DescripciÃ³n</label>
               <textarea
                 rows="3"
                 placeholder="Detalles opcionales del producto"

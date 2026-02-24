@@ -190,7 +190,7 @@ const ProductsPage = () => {
 
                     <td>
                       <div className="stock-cell">
-                        <span className={`stock-number ${status}`}>
+                        <span className={`stock-number`}>
                           {product.stock}
                         </span>
 
