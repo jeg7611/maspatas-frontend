@@ -63,7 +63,10 @@ src/
 - `GET/POST /api/customers`
 - `GET /api/inventory`
 - `POST /api/inventory/movements`
-- `GET/POST /api/sales`
+- `GET /api/sales`
+- `POST /api/sales/sell`
+- `POST /api/sales/pay`
+- `POST /api/sales/cancel`
 - `GET/POST /api/users`
 
 ## Notes
