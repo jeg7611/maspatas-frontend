@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import apiClient from '../api/apiClient';
+import salesApi from '../api/salesApi';
 import LoadingState from '../components/LoadingState';
 import ErrorState from '../components/ErrorState';
 import Modal from '../components/Modal';
@@ -96,12 +97,12 @@ const SalesPage = () => {
     setLoading(true);
     try {
       const [salesRes, productsRes, customersRes] = await Promise.all([ // ? CAMBIO
-        apiClient.get('/api/sales'),
+        salesApi.getSales(),
         apiClient.get('/api/products'),
         apiClient.get('/api/customers'), // ? NUEVO
       ]);
 
-      setSales(normalizeSales(salesRes.data));
+      setSales(normalizeSales(salesRes));
       setProducts(normalizeProducts(productsRes.data));
       setCustomers(normalizeCustomers(customersRes.data));
       setError('');
@@ -180,7 +181,7 @@ const SalesPage = () => {
     }
 
     try {
-      await apiClient.post('/api/sales', {
+      await salesApi.sell({
         customerId: customerId || null,
         items: items.map((item) => ({
           productId: item.productId,
@@ -284,7 +285,7 @@ const SalesPage = () => {
                       )
                     }
                   >
-                    {/* ? ID m·s bonito */}
+                    {/* ? ID m√°s bonito */}
                     <td>
                       <strong>
                         #{sale.id.slice(0, 6).toUpperCase()}
