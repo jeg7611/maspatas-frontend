@@ -108,13 +108,19 @@ const InventoryMovementsPage = () => {
 
   /* ================= FILTER ================= */
 
-  const filteredMovements = useMemo(() => {
-    if (!filterProduct) return movements;
+const filteredMovements = useMemo(() => {
+  let result = movements;
 
-    return movements.filter(
+  if (filterProduct) {
+    result = result.filter(
       (m) => productsMap[m.productId]?.name === filterProduct
     );
-  }, [movements, filterProduct, productsMap]);
+  }
+
+  return result.sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+}, [movements, filterProduct, productsMap]);
 
   /* ================= STATES ================= */
 
