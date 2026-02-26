@@ -111,6 +111,8 @@ const SalesPage = () => {
 
   const [toast, setToast] = useState(null);
 
+  const [payNow, setPayNow] = useState(false);
+  const [payNowMethod, setPayNowMethod] = useState('Cash');
   const [paySale, setPaySale] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
 
@@ -162,6 +164,14 @@ const SalesPage = () => {
     () => Object.fromEntries(customers.map((c) => [c.id, c])),
     [customers]
   );
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
 
   /* ---------------- CALCULOS ---------------- */
 
@@ -228,10 +238,9 @@ const SalesPage = () => {
     }
 
     try {
-      const requestId = crypto.randomUUID();
-
-      await salesApi.sell({
-        requestId,
+      // 1️⃣ Crear venta
+      const createdSale = await salesApi.sell({
+        requestId: crypto.randomUUID(),
         customerId: customerId || null,
         items: items.map((item) => ({
           productId: item.productId,
@@ -241,10 +250,28 @@ const SalesPage = () => {
         })),
       });
 
+      // 2️⃣ Si está marcado pagar ahora
+      if (payNow) {
+        await salesApi.pay({
+          saleId: createdSale.id,
+          paymentMethod: payNowMethod,
+          amount: Number(total || 0),
+          requestId: crypto.randomUUID(),
+        });
+      }
+
       setShowModal(false);
       setItems([createItem()]);
       setCustomerId('');
-      setToast({ type: 'success', message: 'Sale created' });
+      setPayNow(false);
+      setPayNowMethod('Cash');
+
+      setToast({
+        type: 'success',
+        message: payNow
+          ? `Sale created and paid via ${payNowMethod}`
+          : 'Sale created',
+      });
 
       loadData();
     } catch (err) {
@@ -258,9 +285,10 @@ const SalesPage = () => {
     try {
       const requestId = crypto.randomUUID();
 
-      await apiClient.post('/api/sales/pay', {
+      await salesApi.pay({
         saleId: paySale.id,
         paymentMethod,
+        amount: Number(paySale.total || 0),
         requestId,
       });
 
@@ -329,7 +357,7 @@ const SalesPage = () => {
 
         <div className="totals-card">
           <span>Total Revenue</span>
-          <strong>${totalRevenue.toFixed(2)}</strong>
+          <strong>{formatCurrency(totalRevenue)}</strong>
         </div>
       </div>
 
@@ -381,7 +409,7 @@ const SalesPage = () => {
                     </td>
 
                     <td>
-                      <strong>${sale.total.toFixed(2)}</strong>
+                      <strong>{formatCurrency(sale.total)}</strong>
                     </td>
 
                     <td>{sale.items.length}</td>
@@ -465,94 +493,142 @@ const SalesPage = () => {
       {/* CREATE SALE MODAL */}
       {showModal && (
         <Modal title="Create Sale" onClose={() => setShowModal(false)}>
-          <form className="form-grid" onSubmit={submitSale}>
-            <select
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-            >
-              <option value="">Walk-in customer (optional)</option>
+          <form className="sale-form" onSubmit={submitSale}>
 
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name}
-                </option>
-              ))}
-            </select>
-
-            {items.map((item, index) => {
-              const subtotal = calculateItemSubtotal(item);
-
-              return (
-                <div key={index} className="sale-item-row">
-                  <select
-                    value={item.productId}
-                    onChange={(e) =>
-                      handleProductChange(index, e.target.value)
-                    }
-                    required
-                  >
-                    <option value="">Select product</option>
-
-                    {products.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(index, 'quantity', e.target.value)
-                    }
-                    required
-                  />
-
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={item.unitPrice}
-                    onChange={(e) =>
-                      updateItem(index, 'unitPrice', e.target.value)
-                    }
-                    required
-                  />
-
-                  <div className="item-subtotal">
-                    ${subtotal.toFixed(2)}
-                  </div>
-
-                  {items.length > 1 && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      onClick={() => removeItem(index)}
-                    >
-                      ?
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-
-            <button type="button" className="btn" onClick={addItem}>
-              + Add Item
-            </button>
-
-            <div className="sale-total">
-              Total: <strong>${total.toFixed(2)}</strong>
+            {/* Customer */}
+            <div className="form-group">
+              <label>Customer</label>
+              <select
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+              >
+                <option value="">Walk-in Customer</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <button type="submit" className="btn btn-primary">
+            {/* Items */}
+            <div className="items-section">
+              <div className="items-header">
+                <span>Product</span>
+                <span>Qty</span>
+                <span>Unit Price</span>
+                <span>Subtotal</span>
+                <span></span>
+              </div>
+
+              {items.map((item, index) => {
+                const subtotal = calculateItemSubtotal(item);
+
+                return (
+                  <div key={index} className="sale-item-row">
+                    <select
+                      value={item.productId}
+                      onChange={(e) =>
+                        handleProductChange(index, e.target.value)
+                      }
+                      required
+                    >
+                      <option value="">Select product</option>
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="1"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateItem(index, "quantity", e.target.value)
+                      }
+                      required
+                    />
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={item.unitPrice}
+                      onChange={(e) =>
+                        updateItem(index, "unitPrice", e.target.value)
+                      }
+                      required
+                    />
+
+                    <div className="item-subtotal">
+                      {formatCurrency(subtotal)}
+                    </div>
+
+                    {items.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn-remove"
+                        onClick={() => removeItem(index)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              <button type="button" className="btn-add" onClick={addItem}>
+                + Add Product
+              </button>
+            </div>
+
+            {/* Summary */}
+            <div className="sale-summary">
+              <div className="sale-total">
+                <span>Total</span>
+                <strong>{formatCurrency(total)}</strong>
+              </div>
+
+              <label className="pay-now-toggle">
+                <input
+                  type="checkbox"
+                  checked={payNow}
+                  onChange={(e) => setPayNow(e.target.checked)}
+                />
+                <span>Mark as paid</span>
+              </label>
+
+              {payNow && (
+                <div className="payment-section">
+                  <label>Payment Method</label>
+                  <select
+                    value={payNowMethod}
+                    onChange={(e) => setPayNowMethod(e.target.value)}
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="Transfer">Bank Transfer</option>
+                    <option value="Nequi">Nequi</option>
+                  </select>
+
+                  <div className="payment-indicator">
+                    This sale will be recorded as paid via{" "}
+                    <strong>{payNowMethod}</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button type="submit" className="btn btn-primary full-width">
               Save Sale
             </button>
           </form>
         </Modal>
       )}
-
       {/* PAY MODAL */}
       {paySale && (
         <Modal title="Register Payment" onClose={() => setPaySale(null)}>

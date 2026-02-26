@@ -3,7 +3,7 @@
 ========================= */
 :root {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
-               "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --color-primary: #3b82f6;
   --color-primary-strong: #2563eb;
@@ -46,7 +46,9 @@ body {
   color: var(--color-text);
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-weight: 600;
   letter-spacing: -0.4px;
   margin: 0;
@@ -81,6 +83,56 @@ section {
   background: #e5e7eb !important;
   color: #9ca3af !important;
 }
+
+.sale-summary {
+  margin-top: 18px;
+  padding: 16px;
+  background: var(--color-surface-muted);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sale-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+}
+
+.pay-now-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.pay-now-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+.payment-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payment-section select {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+.payment-indicator {
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--color-success);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
 /* =========================
    LOGIN
 ========================= */
@@ -263,9 +315,17 @@ section {
   font-size: 1.6rem;
 }
 
-.stat-success strong { color: var(--color-success); }
-.stat-danger strong { color: var(--color-danger); }
-.stat-warning strong { color: var(--color-warning); }
+.stat-success strong {
+  color: var(--color-success);
+}
+
+.stat-danger strong {
+  color: var(--color-danger);
+}
+
+.stat-warning strong {
+  color: var(--color-warning);
+}
 
 /* =========================
    FILTERS
@@ -381,7 +441,8 @@ table {
   width: 100%;
 }
 
-th, td {
+th,
+td {
   text-align: left;
   padding: 0.9rem;
   border-bottom: 1px solid var(--color-border);
@@ -483,10 +544,101 @@ tbody tr:hover {
   margin-top: 1.4rem;
 }
 
+.sale-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.items-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.items-header {
+  display: grid;
+  grid-template-columns: 2fr 70px 120px 140px 40px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.sale-item-row {
+  display: grid;
+  grid-template-columns: 2fr 70px 120px 140px 40px;
+  gap: 10px;
+  align-items: center;
+}
+
+.item-subtotal {
+  text-align: right;
+  font-weight: 600;
+}
+
+.btn-remove {
+  height: 32px;
+  width: 32px;
+  border-radius: 8px;
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.btn-remove:hover {
+  background: #fecaca;
+}
+
+.btn-add {
+  align-self: flex-start;
+  background: #f1f5f9;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.sale-summary {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sale-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+}
+
+.sale-total strong {
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.full-width {
+  width: 100%;
+}
+
 /* Animaciones */
 @keyframes overlayFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalIn {
@@ -494,6 +646,7 @@ tbody tr:hover {
     opacity: 0;
     transform: translateY(8px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -555,10 +708,21 @@ tbody tr:hover {
   transition: width 0.35s ease;
 }
 
-.stock-fill.stock-empty { background: var(--color-danger); }
-.stock-fill.stock-critical { background: #f97316; }
-.stock-fill.stock-low { background: var(--color-warning); }
-.stock-fill.stock-ok { background: var(--color-success); }
+.stock-fill.stock-empty {
+  background: var(--color-danger);
+}
+
+.stock-fill.stock-critical {
+  background: #f97316;
+}
+
+.stock-fill.stock-low {
+  background: var(--color-warning);
+}
+
+.stock-fill.stock-ok {
+  background: var(--color-success);
+}
 
 /* =========================
    STOCK ALERT
@@ -666,6 +830,7 @@ tbody tr:hover {
 .stock-healthy {
   background: rgb(34, 197, 94);
 }
+
 /* =========================
    BADGES
 ========================= */
