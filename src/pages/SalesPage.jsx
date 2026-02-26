@@ -416,12 +416,80 @@ const SalesPage = () => {
               onChange={(e) => setCustomerId(e.target.value)}
             >
               <option value="">Walk-in customer (optional)</option>
+
               {customers.map((customer) => (
                 <option key={customer.id} value={customer.id}>
                   {customer.name}
                 </option>
               ))}
             </select>
+
+            {items.map((item, index) => {
+              const subtotal = calculateItemSubtotal(item);
+
+              return (
+                <div key={index} className="sale-item-row">
+                  <select
+                    value={item.productId}
+                    onChange={(e) =>
+                      handleProductChange(index, e.target.value)
+                    }
+                    required
+                  >
+                    <option value="">Select product</option>
+
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      updateItem(index, 'quantity', e.target.value)
+                    }
+                    required
+                  />
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={item.unitPrice}
+                    onChange={(e) =>
+                      updateItem(index, 'unitPrice', e.target.value)
+                    }
+                    required
+                  />
+
+                  <div className="item-subtotal">
+                    ${subtotal.toFixed(2)}
+                  </div>
+
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => removeItem(index)}
+                    >
+                      ?
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+            <button type="button" className="btn" onClick={addItem}>
+              + Add Item
+            </button>
+
+            <div className="sale-total">
+              Total: <strong>${total.toFixed(2)}</strong>
+            </div>
 
             <button type="submit" className="btn btn-primary">
               Save Sale
