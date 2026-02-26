@@ -181,12 +181,15 @@ const SalesPage = () => {
     }
 
     try {
+      const requestId = crypto.randomUUID();
       await salesApi.sell({
+        requestId,
         customerId: customerId || null,
         items: items.map((item) => ({
           productId: item.productId,
           quantity: Number(item.quantity),
           unitPrice: Number(item.unitPrice),
+          price: Number(item.unitPrice), // ? FIX
         })),
       });
 
