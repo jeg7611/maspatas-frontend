@@ -14,28 +14,30 @@ const createItem = () => ({
 });
 
 const normalizeSales = (data) =>
-  data.map((sale) => ({
-    id: sale.id,
-    customerId: sale.customerId,
-    total: Number(sale.totalAmount || 0),
-    createdAt: sale.createdAt,
-    status: sale.status || 'Pending', // ? NUEVO
-    items: (sale.items || []).map((item) => ({
-      productId: item.productId,
-      quantity: Number(item.quantity || 0),
-      unitPrice: Number(item.unitPrice || 0),
-    })),
-  }));
+  (data || [])
+    .map((sale) => ({
+      id: sale.id,
+      customerId: sale.customerId,
+      total: Number(sale.totalAmount || 0),
+      createdAt: sale.createdAt,
+      status: sale.status || 'Pending',
+      items: (sale.items || []).map((item) => ({
+        productId: item.productId,
+        quantity: Number(item.quantity || 0),
+        unitPrice: Number(item.unitPrice || 0),
+      })),
+    }))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
 const normalizeProducts = (data) =>
-  data.map((p) => ({
+  (data || []).map((p) => ({
     id: p.id,
     name: p.name,
     price: Number(p.price || 0),
   }));
 
 const normalizeCustomers = (data) =>
-  data.map((c) => ({
+  (data || []).map((c) => ({
     id: c.id,
     name: c.name || c.fullName || c.email || c.id,
   }));
@@ -57,17 +59,33 @@ const handleApiError = (err, fallbackMessage, setError) => {
 };
 
 /* ---------------- STATUS BADGE ---------------- */
-
 const StatusBadge = ({ status }) => {
-  const styles = {
-    Paid: 'badge-success',
-    Pending: 'badge-warning',
-    Cancelled: 'badge-danger',
+  const statusMap = {
+    1: {
+      label: 'Pending',
+      className: 'badge-status-pending',
+    },
+    2: {
+      label: 'Paid',
+      className: 'badge-status-paid',
+    },
+    3: {
+      label: 'Cancelled',
+      className: 'badge-status-cancelled',
+    },
   };
 
-  return <span className={`badge ${styles[status]}`}>{status}</span>;
-};
+  const config = statusMap[Number(status)] || {
+    label: 'Unknown',
+    className: 'badge-status-unknown',
+  };
 
+  return (
+    <span className={`badge ${config.className}`}>
+      {config.label}
+    </span>
+  );
+};
 /* ---------------- TOAST ---------------- */
 
 const Toast = ({ toast }) =>
@@ -98,6 +116,15 @@ const SalesPage = () => {
 
   const [cancelSale, setCancelSale] = useState(null);
 
+  /* ---------------- AUTOHIDE TOAST ---------------- */
+
+  useEffect(() => {
+    if (!toast) return;
+
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   /* ---------------- LOAD DATA ---------------- */
 
   const loadData = async () => {
@@ -124,20 +151,36 @@ const SalesPage = () => {
     loadData();
   }, []);
 
+  /* ---------------- MAPS (OPTIMIZACI�N) ---------------- */
+
+  const productMap = useMemo(
+    () => Object.fromEntries(products.map((p) => [p.id, p])),
+    [products]
+  );
+
+  const customerMap = useMemo(
+    () => Object.fromEntries(customers.map((c) => [c.id, c])),
+    [customers]
+  );
+
   /* ---------------- CALCULOS ---------------- */
 
   const calculateItemSubtotal = (item) =>
-    Number(item.quantity) * Number(item.unitPrice);
+    Number(item.quantity || 0) * Number(item.unitPrice || 0);
 
   const total = useMemo(
     () => items.reduce((sum, item) => sum + calculateItemSubtotal(item), 0),
     [items]
   );
 
+  const totalRevenue = useMemo(
+    () => sales.reduce((sum, s) => sum + Number(s.total || 0), 0),
+    [sales]
+  );
+
   /* ---------------- ITEMS ---------------- */
 
-  const addItem = () =>
-    setItems((prev) => [...prev, createItem()]);
+  const addItem = () => setItems((prev) => [...prev, createItem()]);
 
   const updateItem = (index, field, value) => {
     setItems((prev) =>
@@ -153,7 +196,7 @@ const SalesPage = () => {
   /* ---------------- PRODUCT SELECT ---------------- */
 
   const handleProductChange = (index, productId) => {
-    const product = products.find((p) => p.id === productId);
+    const product = productMap[productId];
 
     updateItem(index, 'productId', productId);
     if (product) updateItem(index, 'unitPrice', product.price);
@@ -186,6 +229,7 @@ const SalesPage = () => {
 
     try {
       const requestId = crypto.randomUUID();
+
       await salesApi.sell({
         requestId,
         customerId: customerId || null,
@@ -201,6 +245,7 @@ const SalesPage = () => {
       setItems([createItem()]);
       setCustomerId('');
       setToast({ type: 'success', message: 'Sale created' });
+
       loadData();
     } catch (err) {
       handleApiError(err, 'Could not create sale.', setError);
@@ -211,9 +256,12 @@ const SalesPage = () => {
 
   const submitPayment = async () => {
     try {
+      const requestId = crypto.randomUUID();
+
       await apiClient.post('/api/sales/pay', {
         saleId: paySale.id,
         paymentMethod,
+        requestId,
       });
 
       setToast({
@@ -232,8 +280,11 @@ const SalesPage = () => {
 
   const submitCancel = async () => {
     try {
+      const requestId = crypto.randomUUID();
+
       await apiClient.post('/api/sales/cancel', {
         saleId: cancelSale.id,
+        requestId,
       });
 
       setToast({ type: 'warning', message: 'Sale cancelled' });
@@ -261,7 +312,10 @@ const SalesPage = () => {
             Refresh
           </button>
 
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowModal(true)}
+          >
             New Sale
           </button>
         </div>
@@ -275,9 +329,7 @@ const SalesPage = () => {
 
         <div className="totals-card">
           <span>Total Revenue</span>
-          <strong>
-            ${sales.reduce((sum, s) => sum + s.total, 0).toFixed(2)}
-          </strong>
+          <strong>${totalRevenue.toFixed(2)}</strong>
         </div>
       </div>
 
@@ -297,12 +349,10 @@ const SalesPage = () => {
 
           <tbody>
             {sales.map((sale) => {
-              const customer = customers.find(
-                (c) => c.id === sale.customerId
-              );
+              const customer = customerMap[sale.customerId];
 
               const isLocked =
-                sale.status === 'Paid' || sale.status === 'Cancelled';
+                sale.status === 2 || sale.status === 3;
 
               return (
                 <React.Fragment key={sale.id}>
@@ -315,7 +365,9 @@ const SalesPage = () => {
                     }
                   >
                     <td>
-                      <strong>#{sale.id.slice(0, 6).toUpperCase()}</strong>
+                      <strong>
+                        #{sale.id.slice(0, 6).toUpperCase()}
+                      </strong>
                     </td>
 
                     <td>
@@ -324,7 +376,9 @@ const SalesPage = () => {
                       )}
                     </td>
 
-                    <td>{new Date(sale.createdAt).toLocaleString()}</td>
+                    <td>
+                      {new Date(sale.createdAt).toLocaleString()}
+                    </td>
 
                     <td>
                       <strong>${sale.total.toFixed(2)}</strong>
@@ -336,14 +390,14 @@ const SalesPage = () => {
                       <StatusBadge status={sale.status} />
                     </td>
 
-                    <td className="actions-cell">
+                    <td
+                      className="actions-cell"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         className="btn btn-success btn-sm"
                         disabled={isLocked}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPaySale(sale);
-                        }}
+                        onClick={() => setPaySale(sale)}
                       >
                         Pay
                       </button>
@@ -351,17 +405,13 @@ const SalesPage = () => {
                       <button
                         className="btn btn-danger btn-sm"
                         disabled={isLocked}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCancelSale(sale);
-                        }}
+                        onClick={() => setCancelSale(sale)}
                       >
                         Cancel
                       </button>
                     </td>
                   </tr>
 
-                  {/* ? DETALLE INTACTO */}
                   {expandedSale === sale.id && (
                     <tr className="sale-details">
                       <td colSpan="7">
@@ -377,20 +427,25 @@ const SalesPage = () => {
 
                           <tbody>
                             {sale.items.map((item, index) => {
-                              const product = products.find(
-                                (p) => p.id === item.productId
-                              );
+                              const product =
+                                productMap[item.productId];
 
                               const subtotal =
                                 calculateItemSubtotal(item);
 
                               return (
                                 <tr key={index}>
-                                  <td>{product?.name || 'Unknown'}</td>
-                                  <td>{item.quantity}</td>
-                                  <td>${item.unitPrice.toFixed(2)}</td>
                                   <td>
-                                    <strong>${subtotal.toFixed(2)}</strong>
+                                    {product?.name || 'Unknown'}
+                                  </td>
+                                  <td>{item.quantity}</td>
+                                  <td>
+                                    ${item.unitPrice.toFixed(2)}
+                                  </td>
+                                  <td>
+                                    <strong>
+                                      ${subtotal.toFixed(2)}
+                                    </strong>
                                   </td>
                                 </tr>
                               );
@@ -407,7 +462,7 @@ const SalesPage = () => {
         </table>
       </div>
 
-      {/* CREATE SALE MODAL (igual) */}
+      {/* CREATE SALE MODAL */}
       {showModal && (
         <Modal title="Create Sale" onClose={() => setShowModal(false)}>
           <form className="form-grid" onSubmit={submitSale}>
@@ -523,10 +578,13 @@ const SalesPage = () => {
       {/* CANCEL MODAL */}
       {cancelSale && (
         <Modal title="Cancel Sale" onClose={() => setCancelSale(null)}>
-          <p>Are you sure?</p>
+          <p>Are you sure you want to cancel this sale?</p>
 
           <div className="confirm-actions">
-            <button className="btn btn-secondary" onClick={() => setCancelSale(null)}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setCancelSale(null)}
+            >
               No
             </button>
             <button className="btn btn-danger" onClick={submitCancel}>

@@ -61,6 +61,26 @@ section {
   padding: 24px;
 }
 
+/* Estado disabled general */
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Evita efecto hover cuando está disabled */
+.btn:disabled:hover {
+  background: inherit;
+  color: inherit;
+}
+
+/* Opcional: efecto visual más elegante */
+.btn-disabled {
+  background: #e5e7eb !important;
+  color: #9ca3af !important;
+}
 /* =========================
    LOGIN
 ========================= */
@@ -675,6 +695,26 @@ tbody tr:hover {
 .badge-stock-ok {
   background: rgba(22, 163, 74, 0.12);
   color: var(--color-success);
+}
+
+.badge-status-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--color-warning);
+}
+
+.badge-status-paid {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--color-success);
+}
+
+.badge-status-cancelled {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--color-danger);
+}
+
+.badge-status-unknown {
+  background: rgba(107, 114, 128, 0.12);
+  color: #6b7280;
 }
 
 /* =========================
